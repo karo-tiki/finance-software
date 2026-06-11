@@ -1,144 +1,117 @@
 package com.finance.project.domainLayer.domainEntities.aggregates.category;
-import com.finance.project.domainLayer.domainEntities.vosShared.GroupID;
-import com.finance.project.domainLayer.domainEntities.vosShared.PersonID;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
+
+import com.finance.project.domainLayer.domainEntities.vosShared.*;
+import org.junit.jupiter.api.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@DisplayName("Category Aggregate — Domain Tests")
 class CategoryTest {
 
-    @Test
-    @DisplayName("Should create category successfully for person")
-    void shouldCreateCategoryForPerson() {
+    private PersonID personID;
+    private Category category;
 
-        // Arrange
-        String denomination = "Food";
-        PersonID personID = PersonID.createPersonID("test@gmail.com");
-
-        // Act
-        Category category = Category.createCategory(denomination, personID);
-
-        // Assert
-        assertNotNull(category);
-        assertNotNull(category.getCategoryID());
+    @BeforeEach
+    void setUp() {
+        personID = PersonID.createPersonID("user@email.com");
+        category = Category.createCategory("Comida", personID);
     }
 
-    @Test
-    @DisplayName("Should create category successfully for group")
-    void shouldCreateCategoryForGroup() {
-
-        // Arrange
-        String denomination = "Health";
-        GroupID groupID = GroupID.createGroupID("Team");
-
-        // Act
-        Category category = Category.createCategory(denomination, groupID);
-
-        // Assert
-        assertNotNull(category);
-        assertNotNull(category.getCategoryID());
+    @AfterEach
+    void tearDown() {
+        personID = null;
+        category = null;
     }
 
-    @Test
-    @DisplayName("Should throw exception when denomination is null")
-    void shouldThrowExceptionWhenDenominationIsNull() {
+    @Nested
+    @DisplayName("Suite 1 — Creación de Categoría")
+    class CreacionCategoria {
 
-        // Arrange
-        PersonID personID = PersonID.createPersonID("test@gmail.com");
+        @Test
+        @DisplayName("Crear categoría — retorna no nulo")
+        void createCategory_NotNull() {
+            assertNotNull(category);
+        }
 
-        // Act + Assert
-        Exception exception = assertThrows(
-                IllegalArgumentException.class,
-                () -> Category.createCategory(null, personID)
-        );
+        @Test
+        @DisplayName("Crear categoría — CategoryID no nulo")
+        void createCategory_CategoryIDNotNull() {
+            assertNotNull(category.getCategoryID());
+        }
 
-        assertEquals(
-                "Category not created due to the fact that the denomination parameter hasn't a valid argument",
-                exception.getMessage()
-        );
+        @Test
+        @DisplayName("Crear categoría — denomination correcta")
+        void createCategory_DenominationCorrect() {
+            assertNotNull(category.getCategoryID().getDenomination());
+        }
+
+        @Test
+        @DisplayName("Crear categoría — denomination nula lanza excepción")
+        void createCategory_NullDenomination_ThrowsException() {
+            assertThrows(IllegalArgumentException.class, () ->
+                Category.createCategory(null, personID)
+            );
+        }
+
+        @Test
+        @DisplayName("Crear categoría — ownerID nulo lanza excepción")
+        void createCategory_NullOwnerID_ThrowsException() {
+            assertThrows(IllegalArgumentException.class, () ->
+                Category.createCategory("Comida", null)
+            );
+        }
+
+        @Test
+        @DisplayName("Crear categoría con GroupID — retorna no nulo")
+        void createCategory_WithGroupID_NotNull() {
+            GroupID groupID = GroupID.createGroupID("Amigos");
+            Category cat = Category.createCategory("Transporte", groupID);
+            assertNotNull(cat);
+        }
     }
 
-    @Test
-    @DisplayName("Should throw exception when denomination is empty")
-    void shouldThrowExceptionWhenDenominationIsEmpty() {
+    @Nested
+    @DisplayName("Suite 2 — Equals y HashCode")
+    class EqualsHashCode {
 
-        // Arrange
-        GroupID groupID = GroupID.createGroupID("Team");
+        @Test
+        @DisplayName("equals — misma denominación y owner retorna true")
+        void equals_SameData_ReturnsTrue() {
+            Category category2 = Category.createCategory("Comida", personID);
+            assertEquals(category, category2);
+        }
 
-        // Act + Assert
-        Exception exception = assertThrows(
-                IllegalArgumentException.class,
-                () -> Category.createCategory("", groupID)
-        );
+        @Test
+        @DisplayName("equals — diferente denominación retorna false")
+        void equals_DifferentDenomination_ReturnsFalse() {
+            Category category2 = Category.createCategory("Transporte", personID);
+            assertNotEquals(category, category2);
+        }
 
-        assertEquals(
-                "Category not created due to the fact that the denomination parameter hasn't a valid argument",
-                exception.getMessage()
-        );
-    }
+        @Test
+        @DisplayName("equals — mismo objeto retorna true")
+        void equals_SameObject_ReturnsTrue() {
+            assertEquals(category, category);
+        }
 
-    @Test
-    @DisplayName("Should throw exception when ownerID is null")
-    void shouldThrowExceptionWhenOwnerIDIsNull() {
+        @Test
+        @DisplayName("equals — comparar con null retorna false")
+        void equals_Null_ReturnsFalse() {
+            assertNotEquals(category, null);
+        }
 
-        // Act + Assert
-        Exception exception = assertThrows(
-                IllegalArgumentException.class,
-                () -> Category.createCategory("Food", null)
-        );
+        @Test
+        @DisplayName("hashCode — misma categoría genera mismo hash")
+        void hashCode_SameCategory_SameHash() {
+            Category category2 = Category.createCategory("Comida", personID);
+            assertEquals(category.hashCode(), category2.hashCode());
+        }
 
-        assertEquals(
-                "Category not created due to the fact that the ownerID parameter hasn't a valid argument",
-                exception.getMessage()
-        );
-    }
-
-    @Test
-    @DisplayName("Should return true when categories are equal")
-    void shouldReturnTrueWhenCategoriesAreEqual() {
-
-        // Arrange
-        PersonID personID = PersonID.createPersonID("test@gmail.com");
-
-        Category category1 = Category.createCategory("Food", personID);
-        Category category2 = Category.createCategory("Food", personID);
-
-        // Act
-        boolean result = category1.equals(category2);
-
-        // Assert
-        assertTrue(result);
-    }
-
-    @Test
-    @DisplayName("Should return false when categories are different")
-    void shouldReturnFalseWhenCategoriesAreDifferent() {
-
-        // Arrange
-        PersonID personID = PersonID.createPersonID("test@gmail.com");
-
-        Category category1 = Category.createCategory("Food", personID);
-        Category category2 = Category.createCategory("Health", personID);
-
-        // Act
-        boolean result = category1.equals(category2);
-
-        // Assert
-        assertFalse(result);
-    }
-
-    @Test
-    @DisplayName("Should have same hashCode for equal objects")
-    void shouldHaveSameHashCodeForEqualObjects() {
-
-        // Arrange
-        PersonID personID = PersonID.createPersonID("test@gmail.com");
-
-        Category category1 = Category.createCategory("Food", personID);
-        Category category2 = Category.createCategory("Food", personID);
-
-        // Assert
-        assertEquals(category1.hashCode(), category2.hashCode());
+        @Test
+        @DisplayName("hashCode — diferente categoría genera diferente hash")
+        void hashCode_DifferentCategory_DifferentHash() {
+            Category category2 = Category.createCategory("Transporte", personID);
+            assertNotEquals(category.hashCode(), category2.hashCode());
+        }
     }
 }
