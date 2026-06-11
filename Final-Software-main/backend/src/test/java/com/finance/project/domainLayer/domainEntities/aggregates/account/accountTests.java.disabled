@@ -1,0 +1,91 @@
+package com.finance.project.domainLayer.domainEntities.aggregates.account;
+
+import com.finance.project.domainLayer.domainEntities.aggregates.account.Account;
+import com.finance.project.domainLayer.domainEntities.vosShared.PersonID;
+import com.finance.project.domainLayer.repositoriesInterfaces.IAccountRepository;
+import com.finance.project.domainLayer.repositoriesInterfaces.IPersonRepository;
+import com.finance.project.domainLayer.exceptions.NotFoundArgumentsBusinessException;
+import com.finance.project.domainLayer.exceptions.InvalidArgumentsBusinessException;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.*;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class ExtendedAccountServiceTest {
+
+    @Mock
+    private IAccountRepository accountRepository;
+
+    @Mock
+    private IPersonRepository personRepository;
+
+    @InjectMocks
+    private CreateAccountService accountService;
+
+    @Captor
+    private ArgumentCaptor<Account> accountCaptor;
+
+    // --- TEST: INTEGRIDAD DE PERSONA ---
+    @Test
+    @DisplayName("Falla si la persona asociada no existe en el sistema")
+    void createAccount_PersonNotFound_ThrowsException() {
+        // Arrange
+        String email = "missing@finance.com";
+        when(personRepository.existsById(any(PersonID.class))).thenReturn(false);
+
+        // Act & Assert
+        assertThrows(NotFoundArgumentsBusinessException.class, () -> 
+            accountService.createAccount("Savings", "Desc", email)
+        );
+        
+        // El repositorio de cuentas NUNCA debe ser tocado
+        verifyNoInteractions(accountRepository);
+    }
+
+    // --- TEST: UNICIDAD (CAMINO DE ERROR) ---
+    @Test
+    @DisplayName("Falla si el ID de cuenta ya está registrado (Duplicado)")
+    void createAccount_DuplicateId_ThrowsException() {
+        // Arrange
+        when(personRepository.existsById(any())).thenReturn(true);
+        when(accountRepository.existsById(any())).thenReturn(true); // Ya existe
+
+        // Act & Assert
+        assertThrows(InvalidArgumentsBusinessException.class, () -> 
+            accountService.createAccount("Checking", "Main Account", "ana@email.com")
+        );
+        
+        verify(accountRepository, never()).save(any());
+    }
+
+    // --- TEST: VERIFICACIÓN DE MAPEO (CAPTORS) ---
+    @Test
+    @DisplayName("Verifica que los datos del DTO se mapeen correctamente al Agregado de Dominio")
+    void createAccount_ValidatesMappingThroughCaptor() {
+        // Arrange
+        String name = "Investment";
+        String desc = "Long term";
+        when(personRepository.existsById(any())).thenReturn(true);
+        when(accountRepository.existsById(any())).thenReturn(false);
+        when(accountRepository.save(any())).thenAnswer(i -> i.getArguments()[0]);
+
+        // Act
+        accountService.createAccount(name, desc, "ana@email.com");
+
+        // Assert
+        verify(accountRepository).save(accountCaptor.capture());
+        Account captured = accountCaptor.getValue();
+        
+        // Validamos que el nombre en el Agregado coincida con la entrada
+        assertEquals(name, captured.getAccountName().toString());
+        assertEquals(desc, captured.getDescription().toString());
+    }
+}
